@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:share/share.dart'; //共有
+import 'package:flutter/services.dart'; //クリップボード
 
 void main() => runApp(MyApp());
 
@@ -67,6 +69,9 @@ class _MyHomePageState extends State<MyHomePage> {
       up_value = "";
       hugou = "";
     }
+    //Snackbar出すのに必要
+    final GlobalKey<ScaffoldState> _scaffoldKey =
+        new GlobalKey<ScaffoldState>();
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -74,10 +79,32 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.content_copy),
+            onPressed: () {
+              final data = ClipboardData(text: "答え : " + anser_value);
+              Clipboard.setData(data);
+              // スナックバーだす
+              final snackBar = new SnackBar(
+                content: new Text('コピーしたよ！ : 「' + "答え : " + anser_value + "」"),
+              );
+              // Find the Scaffold in the Widget tree and use it to show a SnackBar!
+              _scaffoldKey.currentState.showSnackBar(snackBar);
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.share),
+            onPressed: () {
+              Share.share("答え : " + anser_value);
+            },
+          )
+        ],
       ),
       body: Center(
         // Center is a layout widget. It takes a single child and positions it
@@ -288,7 +315,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 Expanded(
                   child: Container(
                     child: FlatButton(
-                      onPressed: null,
+                      onPressed: () {
+                        AnserTextDelete();
+                      },
                       child: Text(
                         "<",
                         style: TextStyle(color: Colors.blue, fontSize: 40),
@@ -393,13 +422,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // + - * / を押したとき
   void setControllKey() {
-    if (up_value == "") {
-      //上の段に入れる
-      up_value = anser_value;
-      anser_value = "";
-    } else {
-      startCalc();
-    }
+    setState(() {
+      if (up_value == "") {
+        //上の段に入れる
+        up_value = anser_value;
+        anser_value = "";
+      } else {
+        startCalc();
+      }
+    });
   }
 
   //四則演算
@@ -421,7 +452,7 @@ class _MyHomePageState extends State<MyHomePage> {
         case "/":
           double anser_calc =
               double.parse(up_value) / double.parse(anser_value);
-          up_value = anser_calc.toString();
+          up_value = anser_calc.floor().toString();
           break;
       }
       anser_value = "";
@@ -435,6 +466,13 @@ class _MyHomePageState extends State<MyHomePage> {
       anser_value = up_value;
       hugou = "";
       up_value = "";
+    });
+  }
+
+  //一個消す
+  void AnserTextDelete() {
+    setState(() {
+      anser_value = anser_value.substring(0, anser_value.length - 1);
     });
   }
 }
