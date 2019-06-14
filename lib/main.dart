@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share/share.dart'; //共有
 import 'package:flutter/services.dart'; //クリップボード
+import 'package:shared_preferences/shared_preferences.dart'; //SharedPreferences データ保存
 
 void main() => runApp(MyApp());
 
@@ -50,6 +51,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String anser_value;
   String up_value;
   String hugou;
+  List<String> historyList;
+  List<Widget> historyTextWidget;
 
   void _incrementCounter() {
     setState(() {
@@ -64,10 +67,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    //初期化
     if (hugou == null) {
       anser_value = "";
       up_value = "";
       hugou = "";
+      historyList = [];
+      historyTextWidget = [];
+      getData();
     }
     //Snackbar出すのに必要
     final GlobalKey<ScaffoldState> _scaffoldKey =
@@ -102,6 +109,12 @@ class _MyHomePageState extends State<MyHomePage> {
             icon: Icon(Icons.share),
             onPressed: () {
               Share.share("答え : " + anser_value);
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.history),
+            onPressed: () {
+              showHistoryBottomSheet();
             },
           )
         ],
@@ -466,6 +479,7 @@ class _MyHomePageState extends State<MyHomePage> {
       anser_value = up_value;
       hugou = "";
       up_value = "";
+      saveData(anser_value);
     });
   }
 
@@ -473,6 +487,75 @@ class _MyHomePageState extends State<MyHomePage> {
   void AnserTextDelete() {
     setState(() {
       anser_value = anser_value.substring(0, anser_value.length - 1);
+    });
+  }
+
+  //履歴ボトムシート
+  void showHistoryBottomSheet() {
+    historyTextWidget = [];
+    //BottomSheetに乗せるWidgetを配列から作成1
+    for (var i = 0; i < historyList.length; i += 1) {
+      ListTile listTile = new ListTile(
+          title: new Text(historyList[i].toString()),
+          leading: Icon(Icons.history));
+      historyTextWidget.add(listTile);
+    }
+    setState(() {
+      showModalBottomSheet(
+        context: context,
+        builder: (BuildContext cotext) {
+          return new SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FlatButton.icon(
+                    icon: Icon(Icons.delete),
+                    label: Text("履歴削除"),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      deleteHistory();
+                    },
+                  ),
+                ),
+                SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: historyTextWidget,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  //データ保存
+  void saveData(String value) async {
+    SharedPreferences pref_setting = await SharedPreferences.getInstance();
+    historyList.insert(0, value);
+    await pref_setting.setStringList("history_list", historyList);
+  }
+
+  //データ読み出し
+  void getData() async {
+    SharedPreferences pref_setting = await SharedPreferences.getInstance();
+    if (pref_setting.getStringList("history_list") != null) {
+      historyList = pref_setting.getStringList("history_list");
+    }
+  }
+
+  //履歴削除
+  void deleteHistory() async {
+    SharedPreferences pref_setting = await SharedPreferences.getInstance();
+    await pref_setting.remove("history_list");
+    setState(() {
+      //消す。
+      historyList = [];
+      historyTextWidget = [];
     });
   }
 }
